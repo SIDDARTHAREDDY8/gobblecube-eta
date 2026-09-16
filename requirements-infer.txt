@@ -1,3 +1,4 @@
 # Inference-only dependencies for the submission image.
-numpy==2.2.6
-scikit-learn==1.6.1
+# Keep scikit-learn in lockstep with requirements.txt: model.pkl is version-sensitive.
+numpy==2.5.3
+scikit-learn==1.9.1

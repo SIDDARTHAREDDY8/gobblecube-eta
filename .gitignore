@@ -3,3 +3,4 @@ artifacts/*.npz
 artifacts/*.pkl
 __pycache__/
 *.pyc
+starter-ref/

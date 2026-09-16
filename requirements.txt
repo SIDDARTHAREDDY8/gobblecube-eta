@@ -1,6 +1,6 @@
-# Full training/dev dependencies (pinned after the sample run verified them).
-numpy==2.2.6
-pandas==2.2.3
-scikit-learn==1.6.1
-pyarrow==19.0.1
-pyshp==2.3.1
+# Full training/dev dependencies (versions verified by the sample run on 2026-09-16).
+numpy==2.5.3
+pandas==3.0.5
+scikit-learn==1.9.1
+pyarrow==25.0.1
+pyshp==3.1.6
