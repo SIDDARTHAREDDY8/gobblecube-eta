@@ -4,3 +4,4 @@ pandas==3.0.5
 scikit-learn==1.9.1
 pyarrow==25.0.1
 pyshp==3.1.6
+pyproj==3.8.0  # one-time CRS transform in src/zones.py (not needed at inference)

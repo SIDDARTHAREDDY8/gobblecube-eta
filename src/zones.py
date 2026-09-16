@@ -39,6 +39,12 @@ def polygon_centroid_area(pts):
 
 def main() -> None:
     import shapefile  # pyshp
+    from pyproj import Transformer
+
+    # The TLC shapefile is in NAD83 / NY Long Island State Plane (ftUS),
+    # NOT lon/lat — see the .prj in data_raw/taxi_zones/. Reproject the
+    # area-weighted centroids to WGS84.
+    to_wgs84 = Transformer.from_crs("EPSG:2263", "EPSG:4326", always_xy=True)
 
     raw = HERE / "data_raw"
     raw.mkdir(exist_ok=True)
@@ -57,20 +63,20 @@ def main() -> None:
     fields = [f[0] for f in r.fields[1:]]
     loc_idx = fields.index("LocationID")
 
-    zones: dict[int, list] = {}  # loc -> [area_sum, lat*wsum, lon*wsum]
+    zones: dict[int, list] = {}  # loc -> [area_sum, x*wsum, y*wsum] (ftUS)
     for sr in r.iterShapeRecords():
         loc = int(sr.record[loc_idx])
         shape = sr.shape
         parts = list(shape.parts) + [len(shape.points)]
         for i in range(len(parts) - 1):
             ring = shape.points[parts[i]:parts[i + 1]]
-            lon_c, lat_c, area = polygon_centroid_area(ring)
+            x_c, y_c, area = polygon_centroid_area(ring)
             if area <= 0:
                 continue
             acc = zones.setdefault(loc, [0.0, 0.0, 0.0])
             acc[0] += area
-            acc[1] += lat_c * area
-            acc[2] += lon_c * area
+            acc[1] += x_c * area
+            acc[2] += y_c * area
 
     out = HERE / "artifacts" / "zones.csv"
     out.parent.mkdir(exist_ok=True)
@@ -78,8 +84,9 @@ def main() -> None:
         w = csv.writer(f)
         w.writerow(["LocationID", "lat", "lon"])
         for loc in sorted(zones):
-            area, la, lo = zones[loc]
-            w.writerow([loc, f"{la / area:.6f}", f"{lo / area:.6f}"])
+            area, xs, ys = zones[loc]
+            lon, lat = to_wgs84.transform(xs / area, ys / area)
+            w.writerow([loc, f"{lat:.6f}", f"{lon:.6f}"])
     print(f"wrote {out} with {len(zones)} zones")
 
 
