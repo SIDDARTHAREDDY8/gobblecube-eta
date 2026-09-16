@@ -60,7 +60,11 @@ FEATURE_NAMES = [
     "log_pair_count",
     "hour_sin", "hour_cos", "dow_sin", "dow_cos", "mon_sin", "mon_cos",
 ]
-CATEGORICAL_IDX = [0, 1, 2, 3, 4]
+# NOTE: pu/do are NOT native categoricals: sklearn's HGBR caps native
+# categorical cardinality at 255, but zones run 1..265. pu/do go in as
+# numerics (their spatial signal also rides on lat/lon + haversine);
+# hour/dow/month stay native categoricals.
+CATEGORICAL_IDX = [2, 3, 4]
 
 
 def cyclic_time(hour: int, dow: int, month: int) -> tuple[float, ...]:

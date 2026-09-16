@@ -108,6 +108,35 @@ def main() -> None:
     print("lookup MAEs:", {k: round(v, 1) for k, v in results.items()
                            if k.endswith("mae")})
 
+    # ---- threshold ablation: pick the backoff thresholds on val ----
+    variants = {
+        "default": dict(thresholds),
+        "aggressive": {"l1_pu_do_hour_dow": 4, "l2_pu_do_hour": 3,
+                       "l3_pu_do": 2, "l4_pu": 1, "l5_do": 1},
+        "conservative": {"l1_pu_do_hour_dow": 16, "l2_pu_do_hour": 10,
+                         "l3_pu_do": 5, "l4_pu": 2, "l5_do": 2},
+        "l1_strict": dict(dict(thresholds), l1_pu_do_hour_dow=32),
+        "no_l1": dict(thresholds, l1_pu_do_hour_dow=10**9),
+    }
+    ablation = {}
+    for name, thr in variants.items():
+        pv = batch_lookup_predict(val["pu"], val["do"], val["hour"],
+                                  val["dow"], tables, thr)
+        ablation[name] = round(mae(y_val, pv), 2)
+    results["threshold_ablation"] = ablation
+    best = min(variants, key=lambda k: ablation[k])
+    print("threshold ablation:", ablation, "-> best:", best)
+    if ablation[best] < ablation["default"]:
+        meta_path = HERE / "artifacts" / "meta.json"
+        meta = json.loads(meta_path.read_text())
+        meta["thresholds"] = variants[best]
+        meta_path.write_text(json.dumps(meta, indent=2))
+        thresholds = variants[best]
+        pred_h = batch_lookup_predict(val["pu"], val["do"], val["hour"],
+                                      val["dow"], tables, thresholds)
+        results["hierarchical_mae"] = mae(y_val, pred_h)
+        print(f"meta.json thresholds updated to '{best}'")
+
     if not args.skip_gbt:
         from sklearn.ensemble import HistGradientBoostingRegressor
 

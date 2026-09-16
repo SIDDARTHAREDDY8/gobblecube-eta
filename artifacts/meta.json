@@ -1,0 +1,10 @@
+{
+  "thresholds": {
+    "l1_pu_do_hour_dow": 1000000000,
+    "l2_pu_do_hour": 5,
+    "l3_pu_do": 3,
+    "l4_pu": 2,
+    "l5_do": 2
+  },
+  "global_mean": 1005.9787799120797
+}
