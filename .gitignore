@@ -1,0 +1,5 @@
+data_raw/
+artifacts/*.npz
+artifacts/*.pkl
+__pycache__/
+*.pyc
