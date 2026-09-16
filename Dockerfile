@@ -13,6 +13,13 @@ RUN pip install --no-cache-dir -r requirements-infer.txt
 COPY predict.py grade.py ./
 COPY artifacts/ ./artifacts/
 
+# Single-threaded inference: one predict() call can't usefully parallelize,
+# and thread-pool spin-up under CPU contention caused 1s+ latency spikes
+# (measured: p99 6.3 ms single-threaded vs 600+ ms spikes multi-threaded
+# on a loaded 2-CPU VM). Steady-state cost per request is ~3-10 ms.
+ENV OMP_NUM_THREADS=1
+ENV OPENBLAS_NUM_THREADS=1
+
 # Build-time smoke test: the module must import and answer in budget.
 RUN python -c "import predict, time; \
     r={'pickup_zone':132,'dropoff_zone':236,'requested_at':'2024-01-15T08:30:00','passenger_count':1}; \

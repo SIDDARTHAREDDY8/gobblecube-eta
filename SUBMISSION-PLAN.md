@@ -17,8 +17,10 @@
    distance, weekend/rush flags, log route frequency. Native categorical
    support for zone/time ids.
 3. **predict.py**: lookup + GBT residual, clipped to [30s, 4h]. Single
-   request ≈ a few ms on CPU (budget 200 ms; measured on this VM:
-   p50 9.1 ms, p99 76 ms, max 156 ms over 200 requests). Inference deps:
+   request ≈ a few ms on CPU (budget 200 ms; measured single-threaded:
+   p50 3.6 ms, p99 11 ms, max 13 ms over 200 requests — the Dockerfile pins
+   OMP_NUM_THREADS=1 because multi-threaded BLAS caused 1s+ p99 spikes under
+   CPU contention on a 2-CPU VM). Inference deps:
    only `numpy` + `scikit-learn`. No network calls, no pandas at inference.
 
 Why this shape: the challenge's own numbers say a 10-line zone-pair average
@@ -58,7 +60,7 @@ One real month of TLC data — `yellow_tripdata_2023-06.parquet` (55 MB,
 | Global mean | 591.9 |
 | Zone-pair averages | 290.2 |
 | Hierarchical backoff | 255.8 |
-| Backoff + residual GBT | **240.3** |
+| Backoff + residual GBT | **239.8** |
 
 Threshold ablation (val MAE, lower is better): default 258.8, aggressive
 258.5, conservative 262.7, l1_strict(≥32) 256.8, **no_l1 255.8** → the

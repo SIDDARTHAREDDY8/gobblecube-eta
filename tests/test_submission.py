@@ -11,10 +11,16 @@ Covers the challenge constraints:
 from __future__ import annotations
 
 import json
+import os
 import socket
 import sys
 import time
 from pathlib import Path
+
+# Mirror the Dockerfile's single-threaded inference: without this, OpenMP
+# thread-pool contention spikes p99 latency 100x on a loaded CPU.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
 HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
@@ -55,6 +61,8 @@ def test_varies_with_time_of_day():
 
 
 def test_latency_under_200ms():
+    # Single-threaded inference (see env setup above) keeps this stable;
+    # steady state is ~4 ms per request, budget is 200 ms.
     lat = []
     for i in range(200):
         r = sample_request(pickup_zone=1 + (i * 37) % 265,
