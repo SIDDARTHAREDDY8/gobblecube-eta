@@ -1,0 +1,21 @@
+{
+  "n_val": 589836,
+  "global_mean_mae": 591.8720703861765,
+  "zone_pair_mae": 290.1628837487145,
+  "hierarchical_mae": 255.80911137225533,
+  "threshold_ablation": {
+    "default": 258.76,
+    "aggressive": 258.49,
+    "conservative": 262.67,
+    "l1_strict": 256.8,
+    "no_l1": 255.81
+  },
+  "blended_mae": 240.32753148043176,
+  "gbt_n_iter": 250,
+  "months": [
+    "2023-06"
+  ],
+  "val_cutoff": "2023-06-25",
+  "train_rows": 2606681,
+  "gbt_sample": 400000
+}

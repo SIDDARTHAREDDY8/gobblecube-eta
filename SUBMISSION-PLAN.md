@@ -17,8 +17,9 @@
    distance, weekend/rush flags, log route frequency. Native categorical
    support for zone/time ids.
 3. **predict.py**: lookup + GBT residual, clipped to [30s, 4h]. Single
-   request ≈ a few ms on CPU (budget 200 ms). Inference deps: only
-   `numpy` + `scikit-learn`. No network calls, no pandas at inference.
+   request ≈ a few ms on CPU (budget 200 ms; measured on this VM:
+   p50 9.1 ms, p99 76 ms, max 156 ms over 200 requests). Inference deps:
+   only `numpy` + `scikit-learn`. No network calls, no pandas at inference.
 
 Why this shape: the challenge's own numbers say a 10-line zone-pair average
 (~300s Dev MAE) already beats their naive GBT (~350s). Duration in NYC is
@@ -54,12 +55,18 @@ One real month of TLC data — `yellow_tripdata_2023-06.parquet` (55 MB,
 
 | Approach | Val MAE (s) |
 |---|---|
-| Global mean | FILL |
-| Zone-pair averages | FILL |
-| Hierarchical backoff | FILL |
-| Backoff + residual GBT | FILL |
+| Global mean | 591.9 |
+| Zone-pair averages | 290.2 |
+| Hierarchical backoff | 255.8 |
+| Backoff + residual GBT | **240.3** |
 
-Threshold ablation (val MAE): FILL.
+Threshold ablation (val MAE, lower is better): default 258.8, aggressive
+258.5, conservative 262.7, l1_strict(≥32) 256.8, **no_l1 255.8** → the
+`(pu,do,hour,dow)` cells overfit on one month of train, so the shipped
+thresholds disable L1 (`meta.json`). The GBT then carries the time-of-day
+signal via its hour/dow features instead. **The full-scale run re-runs
+this ablation on the real Dec-2023 dev slice** — with 11.5 months of
+support per cell, L1 may earn its place back; let the data decide there.
 
 **How to read these numbers honestly:** the val slice is the last 6 days
 of *June* 2023, not the real Dev (last 2 weeks of *Dec* 2023), so the
@@ -97,12 +104,15 @@ python scripts/train_all.py \
   --val-cutoff 2023-12-18 --sample 3000000
 
 # 4. Smoke tests (needs artifacts/ from step 3)
-python -m pytest tests/ -q
+python -m pytest tests/ -q   # or: python tests/test_submission.py
+# (contract, latency < 200 ms, no-network-at-inference, MAE sanity)
 
 # 5. Grade-path check with the challenge's own harness.
-#    Build a dev-format parquet from the val slice, then:
 python grade.py                      # local: MAE on the val slice
 ```
+Note: on the sample run the GBT hit `max_iter=250` (early stopping never
+fired) — at full scale, try `--max-iter 400` if you have the CPU budget;
+it was still improving.
 
 Expected artifacts: `artifacts/lookups.npz` (~60–120 MB),
 `artifacts/model.pkl` (~5–15 MB), `artifacts/zones.csv`,

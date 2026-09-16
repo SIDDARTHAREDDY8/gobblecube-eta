@@ -50,6 +50,7 @@ def main() -> None:
     ap.add_argument("--raw-dir", default=str(HERE / "data_raw"))
     ap.add_argument("--loss", default="absolute_error",
                     choices=["absolute_error", "squared_error"])
+    ap.add_argument("--max-iter", type=int, default=250)
     ap.add_argument("--skip-gbt", action="store_true",
                     help="only build lookups + report lookup MAEs")
     args = ap.parse_args()
@@ -150,7 +151,7 @@ def main() -> None:
         print(f"training HGBR on {len(sub):,} rows, loss={args.loss} ...")
         t2 = time.time()
         model = HistGradientBoostingRegressor(
-            loss=args.loss, max_iter=250, max_leaf_nodes=63,
+            loss=args.loss, max_iter=args.max_iter, max_leaf_nodes=63,
             learning_rate=0.06, min_samples_leaf=100,
             l2_regularization=1.0, early_stopping=True,
             n_iter_no_change=20, validation_fraction=0.1,
