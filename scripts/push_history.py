@@ -115,7 +115,9 @@ def main() -> None:
                 continue
             meta, path = t.split("\t")
             mode, typ, bsha = meta.split()
-            assert typ == "blob", t
+            if typ != "blob":
+                print(f"  skip non-blob {path} ({typ})", flush=True)
+                continue
             if bsha not in blob_cache:
                 content = subprocess.run(
                     ["git", "cat-file", "-p", bsha], cwd=HERE,
