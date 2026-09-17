@@ -32,8 +32,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent
-                      / "skills" / "github" / "bin"))
+sys.path.insert(0, str(Path.home() / "workspace" / "skills" / "github" / "bin"))
 from gh_api import call  # noqa: E402
 
 OWNER = "SIDDARTHAREDDY8"
@@ -89,15 +88,22 @@ def main() -> None:
 
     ref = api("GET",
               f"/repos/{OWNER}/{args.repo}/git/matching-refs/heads/")
-    # The seed commit created refs/heads/main (account default branch).
+    # The seed commit created the default branch; use whatever it is.
     parent = None
+    branch = None
     for r in ref:
         if r["ref"] == "refs/heads/main":
             parent = r["object"]["sha"]
+            branch = "main"
+            break
+    if parent is None and ref:
+        branch = ref[0]["ref"].split("/")[-1]
+        parent = ref[0]["object"]["sha"]
+        print(f"note: default branch is {branch}, not main")
     if parent is None:
-        raise SystemExit("no refs/heads/main after seeding?!"
+        raise SystemExit("no branches after seeding?!"
                          f" refs seen: {[r['ref'] for r in ref]}")
-    print(f"seed parent: {parent[:12]}")
+    print(f"seed parent on {branch}: {parent[:12]}")
 
     blob_cache: dict[str, str] = {}  # local blob sha -> github blob sha
     for line in commits:
@@ -135,14 +141,19 @@ def main() -> None:
         parent = commit["sha"]
         print(f"replayed {sha[:12]} -> {parent[:12]}  {subject[:60]}")
 
-    api("PATCH", f"/repos/{OWNER}/{args.repo}/git/refs/heads/main",
+    api("PATCH", f"/repos/{OWNER}/{args.repo}/git/refs/heads/{branch}",
         {"sha": parent})
-    print(f"refs/heads/main -> {parent[:12]}")
+    print(f"refs/heads/{branch} -> {parent[:12]}")
 
     # ---- verify (never trust a push claim) ----
-    r = api("GET", f"/repos/{OWNER}/{args.repo}/git/ref/heads/main")
+    r = api("GET", f"/repos/{OWNER}/{args.repo}/git/ref/heads/{branch}")
     assert r["object"]["sha"] == parent, "ref SHA mismatch!"
-    t = api("GET", f"/repos/{OWNER}/{args.repo}/git/trees/{parent}?recursive=1")
+    commit_obj = api("GET",
+                     f"/repos/{OWNER}/{args.repo}/git/commits/{parent}")
+    tree_sha = commit_obj["tree"]["sha"]
+    t = api("GET",
+            f"/repos/{OWNER}/{args.repo}/git/trees/{tree_sha}?recursive=1")
+    assert not t.get("truncated"), "tree was truncated!"
     paths = {e["path"] for e in t["tree"] if e["type"] == "blob"}
     missing = REQUIRED_PATHS - paths
     assert not missing, f"missing from pushed tree: {missing}"
