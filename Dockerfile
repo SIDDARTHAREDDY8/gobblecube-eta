@@ -2,8 +2,8 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Inference needs only numpy + scikit-learn (no pandas/geopandas/xgboost):
-# image stays far under the 2.5 GB budget.
+# Inference needs numpy + scikit-learn + pandas/pyarrow (grade.py reads the
+# input parquet); no geopandas/xgboost: image stays far under the 2.5 GB budget.
 COPY requirements-infer.txt .
 RUN pip install --no-cache-dir -r requirements-infer.txt
 

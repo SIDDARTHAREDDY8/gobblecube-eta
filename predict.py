@@ -10,7 +10,10 @@ returns predicted trip duration in seconds (float).
 Method: hierarchical backoff lookup tables over (pu,do,hour,dow) built from
 11.5 months of 2023 NYC yellow-taxi trips, plus a HistGradientBoosting
 regressor trained on the lookup residual with geo + calendar features.
-Single-request latency is a few ms on CPU (budget: 200 ms). No network calls.
+The residual model deliberately excludes month features: the dev/eval
+windows are holiday slices whose month effect does not transfer from the
+rest of the year. Single-request latency is a few ms on CPU (budget:
+200 ms). No network calls.
 """
 from __future__ import annotations
 
@@ -94,7 +97,7 @@ def predict(request: dict) -> float:
         s = s[:-1] + "+00:00"
     ts = datetime.fromisoformat(s)
     ts = ts.replace(tzinfo=NYC) if ts.tzinfo is None else ts.astimezone(NYC)
-    hour, dow, month = ts.hour, ts.weekday(), ts.month  # Monday=0
+    hour, dow = ts.hour, ts.weekday()  # Monday=0
 
     base = _lookup(pu, do, hour, dow)
 
@@ -102,8 +105,10 @@ def predict(request: dict) -> float:
     do_lat, do_lon = _zones.get(do, _FALLBACK)
     pair_count = int(_TABLES["l3"][1][pu, do])
 
+    # 17 features; month and its cyclic encodings are intentionally excluded
+    # (holiday-slice distribution shift — see module docstring).
     x = np.array([[
-        pu, do, hour, dow, month,
+        pu, do, hour, dow,
         pax,
         pu_lat, pu_lon, do_lat, do_lon,
         _haversine_km(pu_lat, pu_lon, do_lat, do_lon),
@@ -113,7 +118,6 @@ def predict(request: dict) -> float:
         # cyclic time encodings (mirrors src/features.cyclic_time)
         math.sin(2 * math.pi * hour / 24), math.cos(2 * math.pi * hour / 24),
         math.sin(2 * math.pi * dow / 7), math.cos(2 * math.pi * dow / 7),
-        math.sin(2 * math.pi * month / 12), math.cos(2 * math.pi * month / 12),
     ]], dtype=np.float64)
 
     resid = float(_MODEL.predict(x)[0])

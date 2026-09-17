@@ -1,0 +1,15 @@
+# Keep the build context lean: only the inference payload ships.
+data_raw/
+data/
+.infer-test-venv/
+__pycache__/
+*.pyc
+.git/
+tests/
+scripts/
+src/
+notebooks/
+*.md
+!README.md
+EMAIL_DRAFT.txt
+COMPLETION_REPORT.md

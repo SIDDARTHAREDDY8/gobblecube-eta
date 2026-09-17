@@ -1,6 +1,10 @@
 data_raw/
+data/
+.infer-test-venv/
 artifacts/*.npz
 artifacts/*.pkl
 __pycache__/
 *.pyc
 starter-ref/
+COMPLETION_REPORT.md
+EMAIL_DRAFT.txt
