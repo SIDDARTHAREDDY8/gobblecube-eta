@@ -111,10 +111,8 @@ parquet) and stays far under the 2.5 GB limit.
 
 ## What I tried that didn't make it
 
-> TODO (Siddartha — your voice): e.g. any feature you ablated, month-level
-> cells, weather joins, deeper trees. The graders explicitly want the
-> failures.
+Tried month as a GBT feature first. It scored 270.4s on the dev slice vs 256.8s without it. December is a holiday slice and the month effect from the rest of the year doesn't transfer, so I dropped it. Also tried letting the GBT carry the whole prediction without the lookup ladder. It landed around 300s on the sample slice while the hierarchical lookups alone hit 255.8s. The lookups were doing the real work, so the GBT got demoted to residual duty. One more: the zone centroids were silently wrong for a while because the shapefile is EPSG:2263 (state-plane feet), not WGS84. Caught it by checking units.
 
 ## What I'd try next
 
-> TODO (Siddartha — your voice): one or two honest next experiments.
+With more time: join weather data. Precipitation and snow hit trip times hard and December has plenty of it. Also finer lookup cells with shrinkage instead of hard minimum-count cutoffs, so sparse cells borrow strength instead of backing off. And a bigger residual model. The 17-feature GBT is small. With the lookup tables handling the base rate, a deeper model on the residual might squeeze out a few more seconds.

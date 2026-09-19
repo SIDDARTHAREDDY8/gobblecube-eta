@@ -39,10 +39,20 @@ candidate's direction. The trajectory below matches the git log.
 - The inference-venv grader-path validation, which caught a real bug:
   `grade.py` needed pandas, which was missing from the image.
 
-## Candidate's own sections (TODO)
+## Candidate's own sections
 
-<!-- The candidate fills these in their own words before submitting. -->
+- [x] Why this approach (motivation, design judgment)
+- [x] What was tried that didn't make it
+- [x] What would be tried next with more time
 
-- [ ] Why this approach (motivation, design judgment)
-- [ ] What was tried that didn't make it
-- [ ] What would be tried next with more time
+### Why this approach
+
+The data made the call. A 10-line zone-pair average beat the naive GBT baseline, so I stopped trying to make the model smart and let lookup tables carry the prediction instead. The hierarchy is the whole bet: (pickup_zone, dropoff_zone, hour, day_of_week) cells where they have support, coarser cells backing them up where they don't, five minimum-count thresholds picked by ablation on the dev slice. The GBT only learns the residual: rush-hour slowdowns, weekend effects, distance corrections the coarse cells miss. Boring design, best number.
+
+### What was tried that didn't make it
+
+Month as a GBT feature hurt: 270.4s on dev vs 256.8s without it, because December is a holiday slice and the month effect from the rest of the year doesn't transfer. A pure GBT carrying the whole prediction landed around 300s on the sample slice vs 255.8s for the hierarchical lookups alone, so the GBT got demoted to residual duty. And the zone centroids were silently wrong until I reprojected the shapefile from EPSG:2263 (state-plane feet) — caught it by checking units.
+
+### What would be tried next with more time
+
+Weather joins first — precipitation and snow hit trip times hard and December has plenty of it. Then finer lookup cells with shrinkage instead of hard minimum-count cutoffs, so sparse cells borrow strength instead of backing off. And a deeper residual model: the 17-feature GBT is small, and with the lookup tables handling the base rate, a bigger model on the residual might squeeze out a few more seconds.
