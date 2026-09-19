@@ -10,8 +10,8 @@
     "l1_strict": 262.63,
     "no_l1": 273.43
   },
-  "blended_mae": 270.3576606030525,
-  "gbt_n_iter": 250,
+  "blended_mae": 256.6169341242819,
+  "gbt_n_iter": 225,
   "months": [
     "2023-01",
     "2023-02",
@@ -28,5 +28,5 @@
   ],
   "val_cutoff": "2023-12-18",
   "train_rows": 35650305,
-  "gbt_sample": 1200000
+  "gbt_sample": 3600000
 }

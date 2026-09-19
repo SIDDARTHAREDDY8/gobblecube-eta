@@ -56,3 +56,30 @@ Month as a GBT feature hurt: 270.4s on dev vs 256.8s without it, because Decembe
 ### What would be tried next with more time
 
 Weather joins first — precipitation and snow hit trip times hard and December has plenty of it. Then finer lookup cells with shrinkage instead of hard minimum-count cutoffs, so sparse cells borrow strength instead of backing off. And a deeper residual model: the 17-feature GBT is small, and with the lookup tables handling the base rate, a bigger model on the residual might squeeze out a few more seconds.
+
+## Traps in this repo (found the hard way)
+
+**Training features must match `predict.py`'s vector, name for name and in
+order.** `src/features.FEATURE_NAMES` once carried 20 features (month,
+mon_sin, mon_cos) while `predict.py` built 17 without them. Consequence:
+running the README's own reproduce command wrote a 20-feature `model.pkl`
+that `predict.py` could not load — the documented path broke the
+submission, and `artifacts/validation_results.json` (blended 270.4s, worse
+than lookups alone) was that broken model's score. Fixed, and
+`tests/test_submission.py` now asserts the two agree. Do not add a feature
+to one side only.
+
+**Validate with the starter's cleaning, not ours.** `src/prepare.clean()`
+drops `trip_distance == 0` and `passenger_count == 0`. Right for training,
+wrong for reporting: the grader keeps those rows, and `trip_distance` is
+not an inference field. It is 2.7% of dev at 1.09x the MAE. Use
+`scripts/validate_official.py` for any number you intend to publish.
+
+**`grade.py` is the contract but is slow for sweeps** — row-by-row
+`predict()` is ~6.5 min per 50k rows, 2.5+ h for full dev.
+`scripts/validate_official.py` vectorizes it and finishes in ~10 s, but it
+asserts row-exactness against the real `predict()` first and refuses to
+print a number if they diverge. Keep that check if you touch it.
+
+**Numbers to beat:** official dev 257.2s shipped, 261.7s lookups only,
+576.2s global mean. Challenge baseline ~351s dev / ~367s eval.

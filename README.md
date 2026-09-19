@@ -2,9 +2,24 @@
 
 Gobblecube AI Builders take-home submission (ETA track).
 
-**Result: 256.8s MAE** on the real dev window (last two
-weeks of 2023; train on pickup < 2023-12-18, validate on pickup ≥
-2023-12-18). Challenge baseline: ~351s dev / ~367s eval.
+**Result: 257.2s MAE** on the real dev window (last two weeks of 2023;
+train on pickup < 2023-12-18, validate on pickup ≥ 2023-12-18), measured
+with the starter's own cleaning so the number is the one the grader would
+compute. Challenge baseline: ~351s dev / ~367s eval.
+
+> Two cleanings, two numbers. `src/prepare.clean()` drops trips with
+> `trip_distance == 0` or `passenger_count == 0` — correct for *training*,
+> they are garbage, but the grader does not apply it, and `trip_distance`
+> is not even a field we receive at inference. Measured on the real dev
+> window that filter removes 2.7% of rows whose MAE is 1.09x the rest:
+>
+> | dev definition | rows | MAE |
+> |---|---|---|
+> | our cleaning | 1,197,687 | 256.6 s |
+> | **starter's cleaning (what the grader sees)** | **1,230,911** | **257.2 s** |
+>
+> The headline above is the second one. `python scripts/validate_official.py`
+> reproduces it in ~10 s and writes `artifacts/validation_official.json`.
 
 ## What I built
 
@@ -40,12 +55,16 @@ Time-split validation on the real dev window. Nothing from the dev slice
 was used to build the lookup tables or train the GBT; only the five
 backoff thresholds were chosen on dev (discrete ablation, disclosed here).
 
-| Approach | Dev MAE (s) |
+| Approach | Dev MAE (s), starter cleaning |
 |---|---|
-| Global mean | 575.7 |
+| Global mean | 576.2 |
 | Zone-pair averages | 301.2 |
-| Hierarchical backoff | 260.9 |
-| Backoff + residual GBT | 256.8 |
+| Hierarchical backoff | 261.7 |
+| **Backoff + residual GBT (shipped)** | **257.2** |
+
+The residual GBT is worth 4.5s over the lookups alone. Both columns of this
+table come from `scripts/validate_official.py`, which verifies its fast path
+is row-exact against the shipped `predict()` before reporting anything.
 
 Threshold ablation on dev:
 
@@ -73,8 +92,13 @@ python src/zones.py   # writes artifacts/zones.csv
 
 # 3. Train (chunked per month; runs on a 7 GB RAM / 2-CPU machine)
 python scripts/train_full.py --months 2023-01 ... 2023-12 \
-  --val-cutoff 2023-12-18 --gbt-sample-per-month 100000
+  --val-cutoff 2023-12-18 --raw-dir data/raw \
+  --gbt-sample-per-month 300000 --max-iter 500
 # writes artifacts/lookups.npz, artifacts/model.pkl, data/dev.parquet
+# ~90 s on an 8 GB laptop; GBT early-stops around n_iter=225
+
+# 3b. Validate the way the grader will (starter cleaning, full dev, ~10 s)
+python scripts/validate_official.py
 
 # 4. Grade locally (exact scoring harness)
 python grade.py                                   # 50k-row dev sample

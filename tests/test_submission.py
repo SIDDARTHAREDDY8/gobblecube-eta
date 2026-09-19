@@ -121,3 +121,37 @@ if __name__ == "__main__":
         fn()
         print(f"PASS {name}")
     print("all smoke tests passed")
+
+
+# --- train/serve contract -------------------------------------------------
+# These exist because the repo shipped a real instance of this bug: the
+# training path (src/features.FEATURE_NAMES) carried 20 features including
+# month, while predict.py built 17 without it. Running the README's own
+# reproduce command therefore wrote a 20-feature model.pkl that predict.py
+# could not load. Nothing caught it, because nothing tied the two together.
+
+def test_model_feature_count_matches_training_feature_list():
+    """The pickled model must expect exactly the features training defines."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+    from features import FEATURE_NAMES
+
+    n_model = predict._MODEL.n_features_in_
+    assert n_model == len(FEATURE_NAMES), (
+        f"model.pkl expects {n_model} features but src/features.FEATURE_NAMES "
+        f"defines {len(FEATURE_NAMES)}. Training and inference have diverged — "
+        f"retrain, or fix FEATURE_NAMES."
+    )
+
+
+def test_inference_vector_width_matches_model():
+    """predict() must build a vector the model can actually consume.
+
+    Guards the failure mode directly: if predict.py's hand-built feature list
+    drifts from the trained model, this fails instead of the grader seeing a
+    crash or, worse, silently wrong numbers.
+    """
+    req = {"pickup_zone": 132, "dropoff_zone": 236,
+           "requested_at": "2024-01-15T08:30:00", "passenger_count": 1}
+    # predict() raises on width mismatch; assert it round-trips cleanly.
+    out = predict.predict(req)
+    assert isinstance(out, float) and 30.0 <= out <= 14400.0

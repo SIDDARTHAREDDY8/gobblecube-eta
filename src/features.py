@@ -50,21 +50,28 @@ def is_rush_hour(hour: int, dow: int) -> int:
 
 
 # Feature order is fixed and shared with train_model.py / predict.py.
+# MUST stay in lock-step with the feature vector predict.py builds — same
+# names, same order. Month and its cyclic encodings are deliberately absent:
+# dev and eval are winter-holiday slices, so the month effect learned from the
+# rest of the year does not transfer (270.4s with month vs 257.4s without, on
+# the official dev set). Keeping them here while predict.py omitted them is
+# what made `train_full.py` emit a 20-feature model that predict.py could not
+# load — i.e. following the README's own reproduce steps broke the submission.
 FEATURE_NAMES = [
-    "pu", "do", "hour", "dow", "month",          # categorical (native, HGBR)
+    "pu", "do", "hour", "dow",                   # hour/dow native categorical
     "passenger_count",
     "pu_lat", "pu_lon", "do_lat", "do_lon",
     "haversine_km",
     "is_weekend",
     "is_rush",
     "log_pair_count",
-    "hour_sin", "hour_cos", "dow_sin", "dow_cos", "mon_sin", "mon_cos",
+    "hour_sin", "hour_cos", "dow_sin", "dow_cos",
 ]
 # NOTE: pu/do are NOT native categoricals: sklearn's HGBR caps native
 # categorical cardinality at 255, but zones run 1..265. pu/do go in as
 # numerics (their spatial signal also rides on lat/lon + haversine);
-# hour/dow/month stay native categoricals.
-CATEGORICAL_IDX = [2, 3, 4]
+# hour/dow stay native categoricals.
+CATEGORICAL_IDX = [2, 3]
 
 
 def cyclic_time(hour: int, dow: int, month: int) -> tuple[float, ...]:

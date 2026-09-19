@@ -1,0 +1,8 @@
+{
+  "n_dev_official": 1230911,
+  "cleaning": "starter download_data.py (no trip_distance / passenger_count filter)",
+  "global_mean_mae": 576.1746878233521,
+  "lookup_only_mae": 261.7173625443798,
+  "shipped_mae": 257.21293397042024,
+  "model_n_features": 17
+}
